@@ -1,0 +1,30 @@
+{
+    "name": "desktop-notes",
+    "version": "1.0.0",
+    "description": "桌面便签",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "pack": "electron-builder --dir",
+        "dist": "electron-builder"
+    },
+    "build": {
+        "appId": "com.example.notes",
+        "productName": "桌面便签",
+        "copyright": "Copyright © 2025",
+        "asar": false,
+        "files": [
+            "**/*"
+        ],
+        "directories": {
+            "output": "dist"
+        },
+        "win": {
+            "target": "nsis"
+        }
+    },
+    "devDependencies": {
+        "electron": "^37.2.0",
+        "electron-builder": "^26.0.12"
+    }
+}

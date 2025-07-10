@@ -1,0 +1,739 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌面便签</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            background: rgba(0, 0, 0, 0) !important;
+            min-height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .notes-container {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            background: transparent !important;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .notes-content-wrapper {
+            position: absolute;
+            width: 350px;
+            height: 500px;
+            /* background: linear-gradient(135deg, #95DCFC  0%, #F87610 100%);   /* 夕阳*/
+            /* background: linear-gradient(135deg, #FFC3C3  30%, #A6BE44 100%);    /*绿粉 */
+            background: linear-gradient(135deg, #67a693 -50%, #fab955 130%);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            top: 0;
+            left: 0;
+            pointer-events: all;
+            overflow: hidden;
+            transition: width 0.3s, height 0.3s, border-radius 0.3s;
+        }
+
+        .notes-container.collapsed .notes-content-wrapper {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+        }
+
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: opacity 0.3s ease;
+            -webkit-app-region: drag;
+        }
+
+        .collapsed .header {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .date-selector {
+            padding: 0 20px 15px;
+            transition: opacity 0.3s ease;
+        }
+
+        .collapsed .date-selector {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .date-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        .notes-content {
+            padding: 0 20px 20px;
+            height: calc(100% - 140px);
+            overflow-y: auto;
+            transition: opacity 0.3s ease;
+        }
+
+        .collapsed .notes-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .section-title {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .note-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.3s ease;
+        }
+
+        .note-item:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .note-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            margin-top: 2px;
+            -webkit-app-region: no-drag;
+        }
+
+        .note-checkbox.checked {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .note-checkbox.checked::after {
+            content: '✓';
+            color: #667eea;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .note-text {
+            flex: 1;
+            color: white;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .note-text.completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .note-text[contenteditable="true"] {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            outline: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .note-text[contenteditable="true"]:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .note-item:hover .note-actions {
+            opacity: 1;
+        }
+
+        .note-action-btn {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .note-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .add-note {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            -webkit-app-region: no-drag;
+        }
+
+        .add-note-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .add-note-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        .add-note-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .add-note-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .add-note-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .collapsed-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+            z-index: 9999;
+            pointer-events: none;
+            /* 默认不可点 */
+        }
+
+        .container.collapsed .collapsed-icon {
+            pointer-events: auto;
+        }
+
+        .collapsed .collapsed-icon {
+            opacity: 1;
+        }
+
+        .notes-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .notes-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .notes-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .notes-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            padding: 20px;
+        }
+
+        .add-permanent-note {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            -webkit-app-region: no-drag;
+        }
+
+        .permanent-note-indicator {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="notes-container" id="notesContainer">
+        <div class="notes-content-wrapper" id="notesContentWrapper">
+            <div class="collapsed-icon">📝</div>
+            <div class="header">
+                <div class="title">便签</div>
+                <div class="controls">
+                    <button class="control-btn" id="collapseBtn" title="收起/展开">−</button>
+                    <button class="control-btn" id="clearBtn" title="清空今日便签">🗑</button>
+                </div>
+            </div>
+            <div class="date-selector">
+                <input type="date" class="date-input" id="dateInput">
+            </div>
+            <div class="notes-content" id="notesContent">
+                <div class="empty-state">暂无便签，添加一个吧！</div>
+                <div class="add-note">
+                    <input type="text" class="add-note-input" id="addNoteInput" placeholder="输入今日便签...">
+                    <button class="add-note-btn" id="addNoteBtn">+</button>
+                </div>
+                <div class="add-permanent-note">
+                    <input type="text" class="add-note-input" id="addPermanentNoteInput" placeholder="输入永久便签...">
+                    <button class="add-note-btn" id="addPermanentNoteBtn">📌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DesktopNotes {
+            constructor() {
+                this.container = document.getElementById('notesContainer');
+                this.contentWrapper = document.getElementById('notesContentWrapper');
+                this.dateInput = document.getElementById('dateInput');
+                this.notesContent = document.getElementById('notesContent');
+                this.addNoteInput = document.getElementById('addNoteInput');
+                this.addNoteBtn = document.getElementById('addNoteBtn');
+                this.addPermanentNoteInput = document.getElementById('addPermanentNoteInput');
+                this.addPermanentNoteBtn = document.getElementById('addPermanentNoteBtn');
+                this.collapseBtn = document.getElementById('collapseBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+
+                this.isCollapsed = false;
+                this.currentDate = new Date().toISOString().split('T')[0];
+
+                this.initEventListeners();
+                this.loadNotes();
+                this.setCurrentDate();
+            }
+
+            initEventListeners() {
+
+                this.dateInput.addEventListener('change', this.onDateChange.bind(this));
+                this.addNoteBtn.addEventListener('click', () => this.addNote(false));
+                this.addNoteInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addNote(false);
+                });
+                this.addPermanentNoteBtn.addEventListener('click', () => this.addNote(true));
+                this.addPermanentNoteInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addNote(true);
+                });
+                this.collapseBtn.addEventListener('click', this.toggleCollapse.bind(this));
+                this.clearBtn.addEventListener('click', this.clearTodayNotes.bind(this));
+                this.contentWrapper.addEventListener('dblclick', () => {
+                    if (this.isCollapsed) this.toggleCollapse();
+                });
+                this.notesContent.addEventListener('click', (e) => {
+                    const noteItem = e.target.closest('.note-item');
+                    if (!noteItem) return;
+                    const noteId = Number(noteItem.dataset.id);
+                    if (e.target.classList.contains('note-checkbox')) {
+                        e.stopPropagation();
+                        this.toggleNote(noteId);
+                    } else if (e.target.classList.contains('note-text')) {
+                        this.editNote(e.target, noteId);
+                    } else if (e.target.classList.contains('note-action-btn')) {
+                        this.deleteNote(noteId);
+                    }
+                });
+                const collapsedIcon = this.container.querySelector('.collapsed-icon');
+                collapsedIcon.addEventListener('click', () => {
+                    if (this.isCollapsed) this.toggleCollapse();
+                });
+
+
+            }
+
+            async toggleCollapse() {
+                this.isCollapsed = !this.isCollapsed;
+                this.container.classList.toggle('collapsed', this.isCollapsed);
+                this.collapseBtn.textContent = this.isCollapsed ? '+' : '−';
+
+                try {
+                    const [currentX, currentY] = await window.electronAPI.getWindowPosition();
+                    const screen = await window.electronAPI.getScreenSize(); // 获取屏幕尺寸
+                    const targetSize = this.isCollapsed ? [100, 100] : [350, 500];
+                    let targetX, targetY;
+
+                    if (this.isCollapsed) {
+                        // 收起时移动到左上角
+                        targetX = 0; // 左边
+                        targetY = 0; // 顶部
+                    } else {
+                        // 展开时移动到右下角
+                        targetX = screen.width - targetSize[0]; // 屏幕宽度 - 窗口宽度
+                        targetY = screen.height - targetSize[1]; // 屏幕高度 - 窗口高度
+                    }
+
+                    await window.electronAPI.setWindowSize(...targetSize);
+                    await window.electronAPI.setWindowPosition(targetX, targetY);
+                    await window.electronAPI.focusWindow();
+                } catch (error) {
+                    console.error('切换窗口状态失败:', error);
+                }
+            }
+
+
+
+
+
+
+            setCurrentDate() {
+                this.dateInput.value = this.currentDate;
+            }
+
+            onDateChange() {
+                this.currentDate = this.dateInput.value;
+                this.loadNotes();
+            }
+
+            async addNote(isPermanent = false) {
+                const input = isPermanent ? this.addPermanentNoteInput : this.addNoteInput;
+                const text = input.value.trim();
+                if (!text) return;
+
+                const note = {
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    permanent: isPermanent
+                };
+
+                await this.saveNote(note);
+                input.value = '';
+                await this.loadNotes();
+            }
+
+            async saveNote(note) {
+                const notes = await this.getNotesData();
+                if (note.permanent) {
+                    if (!notes.permanent) notes.permanent = [];
+                    notes.permanent.push(note);
+                } else {
+                    if (!notes[this.currentDate]) notes[this.currentDate] = [];
+                    notes[this.currentDate].push(note);
+                }
+                await this.saveNotesData(notes);
+            }
+
+            updateNote(noteId, updates) {
+                const notes = this.getNotesData();
+                if (notes.permanent) {
+                    const permanentNoteIndex = notes.permanent.findIndex(n => n.id === noteId);
+                    if (permanentNoteIndex !== -1) {
+                        Object.assign(notes.permanent[permanentNoteIndex], updates);
+                        this.saveNotesData(notes);
+                        this.loadNotes();
+                        return;
+                    }
+                }
+                if (notes[this.currentDate]) {
+                    const noteIndex = notes[this.currentDate].findIndex(n => n.id === noteId);
+                    if (noteIndex !== -1) {
+                        Object.assign(notes[this.currentDate][noteIndex], updates);
+                        this.saveNotesData(notes);
+                        this.loadNotes();
+                    }
+                }
+            }
+
+            async deleteNote(noteId) {
+                const notes = await this.getNotesData();
+
+                if (notes.permanent) {
+                    notes.permanent = notes.permanent.filter(n => n.id !== noteId);
+                }
+                if (notes[this.currentDate]) {
+                    notes[this.currentDate] = notes[this.currentDate].filter(n => n.id !== noteId);
+                }
+
+                await this.saveNotesData(notes);
+                await this.loadNotes();
+            }
+
+
+            async loadNotes() {
+                const notes = await this.getNotesData();
+                const todayNotes = notes[this.currentDate] || [];
+                const permanentNotes = notes.permanent || [];
+                this.renderNotes(todayNotes, permanentNotes);
+            }
+
+            renderNotes(todayNotes, permanentNotes) {
+                const addNoteSection = this.notesContent.querySelector('.add-note');
+                const addPermanentNoteSection = this.notesContent.querySelector('.add-permanent-note');
+
+                let html = '';
+                if (todayNotes.length > 0) {
+                    html += '<div class="section-title">今日便签</div>';
+                    html += todayNotes.map(note => this.createNoteHTML(note)).join('');
+                }
+                if (permanentNotes.length > 0) {
+                    html += '<div class="section-title">永久便签</div>';
+                    html += permanentNotes.map(note => this.createNoteHTML(note, true)).join('');
+                }
+                if (html === '') {
+                    html = '<div class="empty-state">暂无便签，添加一个吧！</div>';
+                }
+
+                this.notesContent.innerHTML = html;
+                this.notesContent.appendChild(addNoteSection);
+                this.notesContent.appendChild(addPermanentNoteSection);
+            }
+
+            createNoteHTML(note, isPermanent = false) {
+                const indicator = isPermanent ? '<span class="permanent-note-indicator">📌</span>' : '';
+                return `
+                    <div class="note-item" data-id="${note.id}">
+                        <div class="note-checkbox ${note.completed ? 'checked' : ''}"></div>
+                        <div class="note-text ${note.completed ? 'completed' : ''}">${indicator}${note.text}</div>
+                        <div class="note-actions">
+                            <button class="note-action-btn" title="删除">×</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+
+            async toggleNote(noteId) {
+                const notes = await this.getNotesData();
+                let updated = false;
+
+                if (notes.permanent) {
+                    const permanentNote = notes.permanent.find(n => n.id === noteId);
+                    if (permanentNote) {
+                        permanentNote.completed = !permanentNote.completed;
+                        updated = true;
+                    }
+                }
+                if (notes[this.currentDate]) {
+                    const note = notes[this.currentDate].find(n => n.id === noteId);
+                    if (note) {
+                        note.completed = !note.completed;
+                        updated = true;
+                    }
+                }
+                if (updated) {
+                    await this.saveNotesData(notes);
+                    await this.loadNotes();
+                }
+            }
+
+
+            editNote(element, noteId) {
+                if (element.contentEditable === 'true') return;
+
+                const originalText = element.textContent('contenteditable').replace('📌', '').trim();
+                element.contentEditable = true;
+                element.textContent = originalText;
+                element.focus();
+
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.add(range);
+
+                const saveEdit = () => {
+                    element.contentEditable = false;
+                    const newText = element.textContent.trim();
+                    if (newText && newText !== originalText) {
+                        this.updateNote(noteId, { text: newText });
+                    };
+                    this.loadNotes();
+                };
+
+                element.addEventListener('blur', saveEdit, { once: true });
+                element.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                    }
+                    element.blur();
+                }, { once: true });
+            }
+
+            async clearTodayNotes() {
+                if (confirm('确定要清空今日所有便签吗？')) {
+                    const notesData = await this.getNotes();
+                    delete notesData[this.currentDate];
+                    await this.saveNotes(notesData);
+                    await this.loadNotesData();
+                }
+            }
+
+            async getNotesData() {
+                try {
+                    const data = await window.electronAPI.readNotes();
+                    return data || {};
+                } catch (error) {
+                    console.error('Error loading notes:', error);
+                    return {};
+                }
+            }
+
+            async saveNotesData(notes) {
+                try {
+                    const cleanNotes = JSON.parse(JSON.stringify(notes));
+                    const result = await window.electronAPI.writeNotes(cleanNotes);
+                    if (!result.success) console.error('保存失败:', result.error);
+                } catch (e) {
+                    console.error('Error saving notes:', e);
+                }
+            }
+        }
+
+        const app = new DesktopNotes();
+
+        document.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+        });
+
+
+
+
+        document.addEventListener('selectstart', (e) => {
+            if (e.target.closest('.notes-container')) {
+                if (e.target.contentEditable === 'true' || e.target.tagName === 'INPUT') {
+                    return;
+                }
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+
+</html>
